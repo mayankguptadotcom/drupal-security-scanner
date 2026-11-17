@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<!--
+    Dev config: used to develop and test THIS plugin against tests/fixtures.
+    Consumers of the package do not use this file; they enable the plugin with
+    "vendor/bin/psalm-plugin enable drupal-security/scanner", which self-registers
+    the stubs and hooks (see src/Plugin.php).
+    Run taint analysis with the psalm "taint-analysis" CLI flag.
+-->
+<psalm
+    errorLevel="4"
+    resolveFromConfigFile="true"
+    findUnusedCode="false"
+    allowMissingFiles="true"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+>
+    <projectFiles>
+        <directory name="tests/fixtures" />
+    </projectFiles>
+
+    <plugins>
+        <pluginClass class="DrupalSecurityPsalm\Plugin" />
+    </plugins>
+
+    <issueHandlers>
+        <MissingParamType errorLevel="suppress" />
+        <MissingReturnType errorLevel="suppress" />
+        <UnusedVariable errorLevel="suppress" />
+        <UnusedParam errorLevel="suppress" />
+    </issueHandlers>
+</psalm>

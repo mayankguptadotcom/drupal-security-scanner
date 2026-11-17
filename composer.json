@@ -1,0 +1,32 @@
+{
+    "name": "drupal-security/scanner",
+    "description": "Psalm taint-analysis security scanner for Drupal — finds XSS, SQL injection, RCE, SSRF and insecure deserialization in modules, themes and core. A maintained, superset replacement for mortenson/psalm-plugin-drupal.",
+    "type": "psalm-plugin",
+    "license": "GPL-2.0-or-later",
+    "keywords": ["drupal", "psalm", "security", "taint-analysis", "static-analysis", "sast"],
+    "homepage": "https://github.com/mayankguptadotcom/drupal-security-scanner",
+    "authors": [
+        {
+            "name": "Mayank Gupta",
+            "homepage": "https://www.drupal.org/u/mayankguptadotcom"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/mayankguptadotcom/drupal-security-scanner/issues",
+        "source": "https://github.com/mayankguptadotcom/drupal-security-scanner"
+    },
+    "require": {
+        "php": ">=8.1",
+        "vimeo/psalm": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "DrupalSecurityPsalm\\": "src/"
+        }
+    },
+    "extra": {
+        "psalm": {
+            "pluginClass": "DrupalSecurityPsalm\\Plugin"
+        }
+    }
+}
