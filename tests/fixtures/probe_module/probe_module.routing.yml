@@ -1,0 +1,13 @@
+# Path parameters ({name}, {count}) are filled from the URL: attacker input.
+probe_module.hello:
+  path: '/probe/hello/{name}/{count}'
+  defaults:
+    _controller: '\Drupal\probe_module\Controller\ProbeController::hello'
+  requirements:
+    _access: 'TRUE'
+probe_module.node:
+  path: '/probe/node/{node}'
+  defaults:
+    _controller: 'Drupal\probe_module\Controller\ProbeController::node'
+  requirements:
+    _access: 'TRUE'

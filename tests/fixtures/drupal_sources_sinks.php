@@ -34,5 +34,5 @@ function sink_sql(Request $r, Connection $db) { return $db->query('SELECT * FROM
 function sink_markup_create(Request $r) { return Markup::create($r->query->get('h')); } // expect: TaintedHtml
 function sink_markup_key(Request $r, RendererInterface $renderer) { $b = ['#markup' => $r->query->get('h')]; return $renderer->render($b); } // expect: TaintedHtml
 function sink_translation_string(Request $r) { return new TranslatableMarkup($r->query->get('s')); } // expect: TaintedHtml
-function sink_redirect(Request $r) { return new RedirectResponse($r->query->get('u')); } // expect: TaintedSSRF
+function sink_redirect(Request $r) { return new RedirectResponse($r->query->get('u')); } // expect: TaintedHeader
 function sink_where(Request $r, Connection $db) { return $db->select('node', 'n')->where('title = ' . $r->query->get('t'))->execute(); } // expect: TaintedSql

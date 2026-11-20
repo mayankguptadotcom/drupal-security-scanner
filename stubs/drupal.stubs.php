@@ -994,12 +994,12 @@ namespace Symfony\Component\HttpFoundation {
 
     class RedirectResponse extends Response {
         /**
-         * @psalm-taint-sink ssrf $url
+         * @psalm-taint-sink header $url
          */
         public function __construct(string $url, int $status = 302, array $headers = []) {}
 
         /**
-         * @psalm-taint-sink ssrf $url
+         * @psalm-taint-sink header $url
          */
         public function setTargetUrl(string $url): void {}
     }
@@ -1024,7 +1024,7 @@ namespace Symfony\Component\HttpFoundation {
 namespace Drupal\Core\Routing {
     class TrustedRedirectResponse extends \Symfony\Component\HttpFoundation\RedirectResponse {
         /**
-         * @psalm-taint-sink ssrf $url
+         * @psalm-taint-sink header $url
          * Drupal redirect subclass — annotate explicitly (taint sink doesn't
          * inherit through the stub class graph from Symfony's RedirectResponse).
          */
@@ -1198,6 +1198,142 @@ namespace Drupal\Core\Extension {
          * @psalm-taint-sink callable $hook
          */
         public function invokeAll($hook, array $args = []): array {}
+    }
+}
+
+// =============================================================================
+// File system API — a path from input here is path traversal
+// =============================================================================
+namespace Drupal\Core\File {
+    interface FileSystemInterface {
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function moveUploadedFile($filename, $uri);
+
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function chmod($uri, $mode = null);
+
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function unlink($uri, $context = null);
+
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function mkdir($uri, $mode = null, $recursive = false, $context = null);
+
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function rmdir($uri, $context = null);
+
+        /**
+         * @psalm-taint-sink file $source
+         * @psalm-taint-sink file $destination
+         */
+        public function copy($source, $destination, $fileExists = null);
+
+        /**
+         * @psalm-taint-sink file $path
+         */
+        public function delete($path);
+
+        /**
+         * @psalm-taint-sink file $path
+         */
+        public function deleteRecursive($path, ?callable $callback = null);
+
+        /**
+         * @psalm-taint-sink file $source
+         * @psalm-taint-sink file $destination
+         */
+        public function move($source, $destination, $fileExists = null);
+
+        /**
+         * @psalm-taint-sink file $destination
+         */
+        public function saveData($data, $destination, $fileExists = null);
+
+        /**
+         * @psalm-taint-sink file $directory
+         */
+        public function prepareDirectory(&$directory, $options = 1);
+
+        /**
+         * @psalm-taint-sink file $dir
+         */
+        public function scanDirectory($dir, $mask, array $options = []);
+    }
+
+    // Psalm attaches a sink to the method's declaring class, so the concrete
+    // service class (what \Drupal::service('file_system') returns) needs the
+    // same annotations as the interface.
+    class FileSystem implements FileSystemInterface {
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function moveUploadedFile($filename, $uri) {}
+
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function chmod($uri, $mode = null) {}
+
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function unlink($uri, $context = null) {}
+
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function mkdir($uri, $mode = null, $recursive = false, $context = null) {}
+
+        /**
+         * @psalm-taint-sink file $uri
+         */
+        public function rmdir($uri, $context = null) {}
+
+        /**
+         * @psalm-taint-sink file $source
+         * @psalm-taint-sink file $destination
+         */
+        public function copy($source, $destination, $fileExists = null) {}
+
+        /**
+         * @psalm-taint-sink file $path
+         */
+        public function delete($path) {}
+
+        /**
+         * @psalm-taint-sink file $path
+         */
+        public function deleteRecursive($path, ?callable $callback = null) {}
+
+        /**
+         * @psalm-taint-sink file $source
+         * @psalm-taint-sink file $destination
+         */
+        public function move($source, $destination, $fileExists = null) {}
+
+        /**
+         * @psalm-taint-sink file $destination
+         */
+        public function saveData($data, $destination, $fileExists = null) {}
+
+        /**
+         * @psalm-taint-sink file $directory
+         */
+        public function prepareDirectory(&$directory, $options = 1) {}
+
+        /**
+         * @psalm-taint-sink file $dir
+         */
+        public function scanDirectory($dir, $mask, array $options = []) {}
     }
 }
 

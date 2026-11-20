@@ -26,6 +26,12 @@
         "php": ">=8.2",
         "vimeo/psalm": "^6.16"
     },
+    "require-dev": {
+        "drupal/core": "^10.3 || ^11"
+    },
+    "conflict": {
+        "drupal/security_scan": "<1.2"
+    },
     "autoload": {
         "psr-4": {
             "DrupalSecurityPsalm\\": "src/"
@@ -36,8 +42,11 @@
             "pluginClass": "DrupalSecurityPsalm\\Plugin"
         }
     },
-    "require-dev": {
-        "drupal/core": "^10.3 || ^11"
+    "scripts": {
+        "test": "php tests/check.php"
+    },
+    "scripts-descriptions": {
+        "test": "Run the taint fixtures and the built-in sink parity check."
     },
     "config": {
         "allow-plugins": {
@@ -45,11 +54,5 @@
             "drupal/core-composer-scaffold": false,
             "php-http/discovery": false
         }
-    },
-    "scripts": {
-        "test": "php tests/check.php"
-    },
-    "scripts-descriptions": {
-        "test": "Run the taint fixtures and the built-in sink parity check."
     }
 }

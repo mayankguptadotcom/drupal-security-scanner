@@ -8,6 +8,10 @@
  *   // expect: TaintedHtml, TaintedSql   these issue types must be reported here
  *   // expect: none                      nothing may be reported here
  *   // known-false-positive: TaintedHtml reported today, but wrong (documented)
+ *   // known-false-negative: TaintedSql  a real flow Psalm does not report today
+ *
+ * The two "known" forms document current limits; each fails as soon as the
+ * behaviour changes, so a fix is noticed and the annotation updated.
  *
  * Any reported taint issue on a line with no annotation also fails, so a new
  * false positive cannot slip in unnoticed.
@@ -60,14 +64,19 @@ $found = taint_issues($psalm, $root . '/psalm.xml', $root);
 $fail = 0;
 $checked = 0;
 $knownFalsePositives = 0;
+$knownFalseNegatives = 0;
 
-foreach (glob($root . '/tests/fixtures/*.php') as $fixture) {
-  $file = basename($fixture);
-  foreach (file($fixture) as $index => $line) {
+$fixtures = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root . '/tests/fixtures', FilesystemIterator::SKIP_DOTS));
+foreach ($fixtures as $fixture) {
+  if (!preg_match('/\\.(php|module|inc)$/', (string) $fixture)) {
+    continue;
+  }
+  $file = basename((string) $fixture);
+  foreach (file((string) $fixture) as $index => $line) {
     $key = $file . ':' . ($index + 1);
     $got = array_values(array_unique($found[$key] ?? []));
     unset($found[$key]);
-    if (preg_match('#//\s*(expect|known-false-positive):\s*(.+)$#', $line, $m) !== 1) {
+    if (preg_match('#//\s*(expect|known-false-positive|known-false-negative):\s*(.+)$#', $line, $m) !== 1) {
       continue;
     }
     $checked++;
@@ -75,9 +84,14 @@ foreach (glob($root . '/tests/fixtures/*.php') as $fixture) {
     if ($m[1] === 'known-false-positive') {
       $knownFalsePositives++;
     }
-    $ok = $want === 'none'
-      ? $got === []
-      : array_diff(array_map('trim', explode(',', $want)), $got) === [];
+    $types = array_map('trim', explode(',', $want));
+    if ($m[1] === 'known-false-negative') {
+      $knownFalseNegatives++;
+      $ok = array_intersect($types, $got) === [];
+    }
+    else {
+      $ok = $want === 'none' ? $got === [] : array_diff($types, $got) === [];
+    }
     if (!$ok) {
       $fail++;
       printf("FAIL %s  expected %s, got %s\n", $key, $want, $got === [] ? 'nothing' : implode(', ', $got));
@@ -110,9 +124,10 @@ foreach ($plain as $key => $types) {
 }
 
 printf(
-  "\n%d annotated lines checked, %d known false positive(s); built-in parity: %d sink line(s) compared, %d lost.\n%s\n",
+  "\n%d annotated lines checked, %d known false positive(s), %d known false negative(s); built-in parity: %d sink line(s) compared, %d lost.\n%s\n",
   $checked,
   $knownFalsePositives,
+  $knownFalseNegatives,
   count($plain),
   $lost,
   $fail === 0 ? 'OK' : "$fail FAILURE(S)",

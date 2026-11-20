@@ -4,6 +4,35 @@ All notable changes to `drupal-security/scanner` are recorded here. The format
 is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-11-19
+
+Coverage: Drupal's own metadata now feeds the analysis.
+
+### Added
+
+- **URL route parameters are input.** Each `*.routing.yml` of the modules under
+  analysis is read, and a controller argument the route path fills
+  (`/hello/{name}` → `hello(string $name)`) is tainted. Also `_form`
+  (`buildForm()` arguments) and `_title_callback`. Objects (entities Drupal
+  loads by ID) and numbers are not tainted: they cannot carry markup or SQL.
+- **Services are typed.** `\Drupal::service('id')` and `$container->get('id')`
+  return the class registered in `*.services.yml` (core, the site's modules and
+  the modules under analysis), so taint follows calls through a service.
+- **File-system sinks.** `FileSystemInterface` / `FileSystem` methods that take
+  a path (`copy`, `move`, `delete`, `deleteRecursive`, `saveData`, `unlink`,
+  `mkdir`, `rmdir`, `chmod`, `prepareDirectory`, `scanDirectory`,
+  `moveUploadedFile`) report a tainted path as `TaintedFile`.
+- Fixtures for each, plus `// known-false-negative:` annotations that pin a
+  limit of Psalm itself (it reports one path per sink).
+
+### Changed
+
+- **Redirects are reported as `TaintedHeader`, not `TaintedSSRF`.** A redirect
+  sets the `Location` header and makes no server-side request; Psalm has no
+  redirect taint kind. **This changes the issue type for consumers**, so the
+  package now conflicts with `drupal/security_scan` < 1.2, whose report layer
+  expects the old type: Composer keeps those installs on 1.0.x.
+
 ## [1.0.1] - 2026-11-19
 
 A correctness release. **Upgrade from 1.0.0**: it missed command injection
@@ -56,5 +85,6 @@ entirely and reported several safe Drupal APIs as vulnerabilities.
 
 Initial release.
 
+[1.1.0]: https://github.com/mayankguptadotcom/drupal-security-scanner/compare/1.0.1...1.1.0
 [1.0.1]: https://github.com/mayankguptadotcom/drupal-security-scanner/compare/1.0.0...1.0.1
 [1.0.0]: https://github.com/mayankguptadotcom/drupal-security-scanner/releases/tag/1.0.0

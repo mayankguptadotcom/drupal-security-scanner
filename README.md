@@ -8,12 +8,23 @@ real data-flow vulnerabilities in modules, themes and custom code:
   render output and other HTML sinks
 - **SQL injection** — untrusted data reaching raw database queries
 - **SSRF** — untrusted URLs reaching the HTTP client
+- **Path traversal** — untrusted paths reaching PHP file functions and Drupal's
+  file-system service
+- **Open redirect** — untrusted URLs in a redirect, reported as a tainted
+  header (Psalm has no redirect kind; a redirect sets the `Location` header)
 - **Command injection / RCE** — shell sinks and callables built from input
 - **Insecure deserialization** — untrusted data reaching `unserialize()`
 
-It ships a Drupal taint model as stubs (67 input sources, 69 sinks and 12
-sanitizers), plus hooks that clear taint from render-array keys Drupal escapes
-and mark field and form-element values as input. PHP's own functions (`exec`,
+It ships a Drupal taint model as stubs (input sources, sinks and sanitizers,
+including the file-system API), plus hooks that read Drupal's own metadata:
+
+- **URL route parameters are input.** A controller argument filled from the
+  route path (`path: '/hello/{name}'` → `hello(string $name)`) is tainted.
+- **Services are typed.** `\Drupal::service('id')` and `$container->get('id')`
+  return the class from `*.services.yml`, so taint flows through services.
+- **Render arrays are understood.** Keys Drupal escapes (`#title`,
+  `#description`, …) are not sinks; `#markup` and anything unknown are.
+- **Field and form-element values are input.** PHP's own functions (`exec`,
 `unserialize`, `file_get_contents`, …) are left to Psalm, which already models
 them. It self-registers, so you don't edit `psalm.xml` by hand.
 
@@ -61,10 +72,10 @@ drush security:scan my_module
   is flagged; drop it at the report layer (the Security Scan module does).
 - **`$build['#title'] = $x` is reported** even though `#title` is escaped:
   Psalm only lets a plugin clear taint on array literals (`['#title' => $x]`).
-- **Services fetched with `\Drupal::service('id')`** are untyped, so taint is
-  not followed through them.
-- **Controller arguments filled from the URL** (`/hello/{name}` → `$name`) are
-  not yet treated as input.
+- **Psalm reports one path per sink.** When two flows reach the same sink and
+  one goes through a helper function, Psalm may report only the direct one.
+- **Controllers declared as services** (`_controller: 'service.id:method'`)
+  are not resolved, so their URL arguments are not treated as input.
 - A clean result does not prove code is secure.
 
 ## Development

@@ -22,6 +22,9 @@ use SimpleXMLElement;
  *     autoescapes while keeping it on the dangerous ones.
  *   - {@see RenderElementSource} and {@see FieldValueSource}, which mark
  *     framework-populated element values and field values as input.
+ *   - {@see RouteParameterSource}, which marks controller arguments filled
+ *     from the URL as input, and {@see ServiceReturnType}, which types
+ *     \Drupal::service('id') — both read the analysed modules' YAML.
  *
  * Every behaviour is pinned by tests/fixtures and tests/check.php.
  *
@@ -46,23 +49,13 @@ final class Plugin implements PluginEntryPointInterface
         require_once __DIR__ . '/FieldValueSource.php';
         $registration->registerHooksFromClass(FieldValueSource::class);
 
-        // --- Full-site mode seam (modules-first; implemented in a later phase) ---
-        //
-        // For whole-site scans, taint must flow through `\Drupal::service('x')`
-        // and `$container->get('x')` calls, which otherwise return `mixed`. The
-        // plan (mirrors mortenson's approach) is a ContainerHandler implementing
-        // AfterMethodCallAnalysisInterface that reads a dumped container map and
-        // sets the resolved service class as the return type. It is intentionally
-        // NOT registered yet: contrib-module scanning — the current target — does
-        // not need it, and shipping an unconfigured container hook would only add
-        // noise. When enabled it will be gated on a `<containerXml>` config node:
-        //
-        //     if ($config && isset($config->containerXml)) {
-        //         require_once __DIR__ . '/ContainerHandler.php';
-        //         ContainerHandler::init(...);
-        //         $registration->registerHooksFromClass(ContainerHandler::class);
-        //     }
-        //
+        // Drupal metadata: URL route parameters as input, and typed services.
+        require_once __DIR__ . '/DrupalProject.php';
+        require_once __DIR__ . '/RouteParameterSource.php';
+        $registration->registerHooksFromClass(RouteParameterSource::class);
+        require_once __DIR__ . '/ServiceReturnType.php';
+        $registration->registerHooksFromClass(ServiceReturnType::class);
+
         // Psalm cannot make a sink conditional on another argument, so
         // unserialize($x, ['allowed_classes' => FALSE]) is still reported here.
         // Consumers should drop that case at the report layer (the Security
