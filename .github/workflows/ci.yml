@@ -9,16 +9,17 @@ permissions:
 
 jobs:
   taint-fixtures:
-    name: PHP ${{ matrix.php }} / ${{ matrix.deps }} dependencies
+    name: PHP ${{ matrix.php }} / ${{ matrix.psalm }} Psalm
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         # PHP 8.2 resolves Drupal 10 as the dev dependency; 8.3+ resolve Drupal 11.
         php: ['8.2', '8.3', '8.4']
-        # "lowest" pins the oldest Psalm the constraint allows, which matters
-        # because the plugin reads Psalm-internal node types.
-        deps: ['lowest', 'highest']
+        # "oldest" pins the oldest Psalm the constraint allows (the plugin reads
+        # Psalm-internal node types). Only Psalm is pinned: --prefer-lowest would
+        # also lower every transitive package to releases no real install gets.
+        psalm: ['oldest', 'latest']
     steps:
       # Actions are pinned to commit SHAs (v4 and v2 at the time of pinning).
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -27,6 +28,6 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
       - name: Install dependencies
-        run: composer update --no-interaction --no-progress ${{ matrix.deps == 'lowest' && '--prefer-lowest --prefer-stable' || '' }}
+        run: composer update --no-interaction --no-progress ${{ matrix.psalm == 'oldest' && '--with vimeo/psalm:~6.16.0' || '' }}
       - name: Taint fixtures and built-in sink parity
         run: composer test

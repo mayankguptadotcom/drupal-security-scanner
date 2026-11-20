@@ -37,11 +37,14 @@ if (!is_file($psalm)) {
 function taint_issues(string $psalm, string $config, string $cwd): array {
   $cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($psalm)
     . ' -c ' . escapeshellarg($config)
-    . ' --taint-analysis --no-cache --no-progress --output-format=json 2>/dev/null';
-  $json = shell_exec('cd ' . escapeshellarg($cwd) . ' && ' . $cmd);
+    . ' --taint-analysis --no-cache --no-progress --output-format=json';
+  $errFile = tempnam(sys_get_temp_dir(), 'psalm-err-');
+  $json = shell_exec('cd ' . escapeshellarg($cwd) . ' && ' . $cmd . ' 2>' . escapeshellarg($errFile));
+  $stderr = (string) @file_get_contents($errFile);
+  @unlink($errFile);
   $issues = json_decode((string) $json, TRUE);
   if (!is_array($issues)) {
-    fwrite(STDERR, "Psalm did not produce JSON:\n" . substr((string) $json, 0, 2000) . "\n");
+    fwrite(STDERR, "Psalm did not produce JSON.\nstdout: " . substr((string) $json, 0, 2000) . "\nstderr: " . substr($stderr, 0, 4000) . "\n");
     exit(2);
   }
   $found = [];

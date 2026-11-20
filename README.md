@@ -78,7 +78,7 @@ composer test
 checks every `// expect:` annotation (the issue types a line must report, or
 `none`), fails on any unannotated finding, and checks that every built-in sink
 plain Psalm reports is still reported with the plugin. CI runs it on PHP 8.2,
-8.3 and 8.4 against the lowest and highest supported dependencies.
+8.3 and 8.4, with both the oldest supported Psalm (6.16) and the latest.
 
 ## License
 

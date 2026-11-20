@@ -50,7 +50,7 @@ entirely and reported several safe Drupal APIs as vulnerabilities.
 
 - A test suite (`composer test`): fixtures annotated with the issues each line
   must or must not report, a built-in sink parity check against plain Psalm,
-  and CI on PHP 8.2–8.4 with the lowest and highest dependencies.
+  and CI on PHP 8.2–8.4 with both the oldest supported Psalm and the latest.
 
 ## [1.0.0] - 2026-11-17
 
