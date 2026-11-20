@@ -17,51 +17,6 @@
 // =============================================================================
 // Drupal Core Static Access
 // =============================================================================
-namespace Drupal {
-    class Core {
-        /**
-         * @psalm-taint-source input
-         */
-        public static function request(): \Symfony\Component\HttpFoundation\Request {}
-
-        /**
-         * @psalm-taint-source input
-         */
-        public static function currentUser(): \Drupal\Core\Session\AccountInterface {}
-
-        /**
-         * @psalm-taint-source input
-         */
-        public static function config($name): \Drupal\Core\Config\ImmutableConfig {}
-
-        /**
-         * @psalm-taint-source input
-         */
-        public static function database(): \Drupal\Core\Database\Connection {}
-
-        /**
-         * @psalm-taint-source input
-         */
-        public static function state(): \Drupal\Core\State\StateInterface {}
-
-        /**
-         * Returns logger channel — individual log methods are sinks
-         */
-        public static function logger($channel): \Psr\Log\LoggerInterface {}
-
-        /**
-         * Service locator — returns whatever service is registered.
-         * Not an escape function; taint passes through.
-         */
-        public static function service($id): mixed {}
-
-        /**
-         * @psalm-taint-source input
-         */
-        public static function urlGenerator(): \Drupal\Core\Utility\UrlGenerator {}
-    }
-}
-
 // =============================================================================
 // Configuration API
 // =============================================================================
@@ -200,9 +155,6 @@ namespace Drupal\Core\Database {
          */
         public function having(string $snippet, $args = []): self {}
 
-        /**
-         * @psalm-taint-sink sql $field
-         */
         public function orderBy(string $field, string $direction = 'ASC'): self {}
 
         /**
@@ -240,15 +192,12 @@ namespace Drupal\Core\Database {
         public function fields(array $fields): self {}
         public function values(array $values): self {}
 
-        /**
-         * @psalm-taint-sink sql
-         */
         public function execute(): mixed {}
     }
 
     class Update extends Insert {
         /**
-         * @psalm-taint-sink sql $snippet
+         * @psalm-taint-sink sql $expression
          */
         public function expression($field, $expression, array $arguments = []): self {}
     }
@@ -256,9 +205,6 @@ namespace Drupal\Core\Database {
     class Delete {
         public function condition($field, $value = null, $operator = null): self {}
 
-        /**
-         * @psalm-taint-sink sql
-         */
         public function execute(): mixed {}
     }
 
@@ -267,28 +213,8 @@ namespace Drupal\Core\Database {
         public function insertFields(array $fields): self {}
         public function updateFields(array $fields): self {}
 
-        /**
-         * @psalm-taint-sink sql
-         */
         public function execute(): mixed {}
     }
-}
-
-namespace {
-    /**
-     * @psalm-taint-sink sql
-     */
-    function db_query($query, array $args = [], array $options = []): mixed {}
-
-    /**
-     * @psalm-taint-sink sql
-     */
-    function db_select($table, ?string $alias = null, array $options = []): \Drupal\Core\Database\SelectQuery {}
-
-    /**
-     * @psalm-taint-escape sql
-     */
-    function db_like($string): string {}
 }
 
 // =============================================================================
@@ -406,19 +332,10 @@ namespace Drupal\Core\Entity {
          */
         public function label(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function id(): mixed {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function bundle(): string {}
 
-        /**
-         * @psalm-taint-sink ssrf
-         */
         public function toLink($text = null, $rel = 'canonical', array $options = []): \Drupal\Core\Link {}
 
         public function access($operation, ?\Drupal\Core\Session\AccountInterface $account = null, $return_as_object = false): bool {}
@@ -440,14 +357,8 @@ namespace Drupal\Core\Entity {
          */
         public function label(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function id(): mixed {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function bundle(): string {}
     }
 
@@ -521,14 +432,8 @@ namespace Drupal\node\Entity {
          */
         public function getTitle(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function getCreatedTime(): int {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function getChangedTime(): int {}
     }
 }
@@ -630,7 +535,7 @@ namespace Drupal\Core\Template {
      */
     class Extension {
         /**
-         * @psalm-taint-sink html $string
+         * @psalm-taint-escape html
          */
         public static function twig_drupal_escape_filter($env, $string, $strategy = 'html', $charset = null, $autoescape = true): string {}
     }
@@ -676,7 +581,8 @@ namespace Drupal\Core\StringTranslation {
      */
     class PluralTranslatableMarkup extends TranslatableMarkup {
         /**
-         * @psalm-taint-sink html $string
+         * @psalm-taint-sink html $singular
+         * @psalm-taint-sink html $plural
          */
         public function __construct($count, string $singular, string $plural, array $args = [], array $options = []) {}
     }
@@ -687,7 +593,8 @@ namespace Drupal\Core\StringTranslation {
     function t(string $string, array $args = [], array $options = []): TranslatableMarkup {}
 
     /**
-     * @psalm-taint-sink html $string
+     * @psalm-taint-sink html $singular
+     * @psalm-taint-sink html $plural
      */
     function format_plural($count, string $singular, string $plural, array $args = [], array $options = []): PluralTranslatableMarkup {}
 }
@@ -697,36 +604,18 @@ namespace Drupal\Core\StringTranslation {
 // =============================================================================
 namespace Drupal\Core\Messenger {
     class Messenger {
-        /**
-         * @psalm-taint-sink html $message
-         */
         public function addMessage($message, string $type = 'status', bool $repeat = true): Messenger {}
 
-        /**
-         * @psalm-taint-sink html $message
-         */
         public function addStatus($message): Messenger {}
 
-        /**
-         * @psalm-taint-sink html $message
-         */
         public function addWarning($message): Messenger {}
 
-        /**
-         * @psalm-taint-sink html $message
-         */
         public function addError($message): Messenger {}
 
-        /**
-         * @psalm-taint-sink html
-         */
         public function all(): array {}
     }
 
     interface MessengerInterface {
-        /**
- * @psalm-taint-sink html $message
-         */
         public function addMessage($message, string $type = 'status', bool $repeat = true): MessengerInterface {}
     }
 }
@@ -901,57 +790,28 @@ namespace Drupal\Component\Utility {
 // =============================================================================
 // URL API
 // =============================================================================
-namespace Drupal\Core\Url {
-    /**
-     * @psalm-taint-sink ssrf $uri
-     */
-    function fromUri($uri, array $options = []): \Drupal\Core\Url {}
-}
-
 namespace Drupal\Core {
     class Url {
-        /**
-         * @psalm-taint-sink ssrf $uri
-         */
         public static function fromUri($uri, array $options = []): self {}
 
         /**
-         * @psalm-taint-sink ssrf $user_input
          * Builds a URL directly from raw user input — open redirect / SSRF if
          * the value isn't validated (e.g. a `javascript:`/external URL).
          */
         public static function fromUserInput($user_input, array $options = []): self {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function toString(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function getUri(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function getRouteName(): ?string {}
     }
 
     class Link {
-        /**
-         * @psalm-taint-sink ssrf $uri
-         */
         public static function fromTextAndUrl($text, Url $url): self {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function toString(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function toRenderable(): array {}
     }
 }
@@ -983,18 +843,12 @@ namespace Symfony\Component\HttpFoundation {
          */
         public function getClientMimeType(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function getFilename(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function getRealPath(): string {}
 
         /**
-         * @psalm-taint-sink html $name
+         * @psalm-taint-sink file $name
          */
         public function move(string $directory, ?string $name = null): self {}
     }
@@ -1005,9 +859,6 @@ namespace Symfony\Component\HttpFoundation {
 // =============================================================================
 namespace Drupal\Core\Session {
     class AccountInterface {
-        /**
-         * @psalm-taint-source input
-         */
         public function id(): int {}
 
         /**
@@ -1025,9 +876,6 @@ namespace Drupal\Core\Session {
     }
 
     class AccountProxy implements AccountInterface {
-        /**
-         * @psalm-taint-source input
-         */
         public function getPreferredLangcode($fallback_to_default = true): string {}
     }
 }
@@ -1048,6 +896,22 @@ namespace Symfony\Component\HttpFoundation {
          * @psalm-taint-source input
          */
         public function getContent($asResource = false): string {}
+
+        /**
+         * Reads attributes, then the query string, then the body.
+         * @psalm-taint-source input
+         */
+        public function get(string $key, mixed $default = null): mixed {}
+
+        /**
+         * @psalm-taint-source input
+         */
+        public function getPathInfo(): string {}
+
+        /**
+         * @psalm-taint-source input
+         */
+        public function getQueryString(): ?string {}
 
         /**
          * @psalm-taint-source input
@@ -1074,9 +938,6 @@ namespace Symfony\Component\HttpFoundation {
          */
         public function getHost(): string {}
 
-        /**
-         * @psalm-taint-source input
-         */
         public function getPort(): int {}
 
         public function isXmlHttpRequest(): bool {}
@@ -1149,16 +1010,10 @@ namespace Symfony\Component\HttpFoundation {
          */
         public function setContent(?string $content): self {}
 
-        /**
-         * @psalm-taint-sink html $content
-         */
         public function sendContent(): self {}
     }
 
     class JsonResponse extends Response {
-        /**
-         * @psalm-taint-sink html $data
-         */
         public function setData($data): self {}
     }
 }
@@ -1309,18 +1164,12 @@ namespace Drupal\Core\Template {
 // =============================================================================
 namespace Drupal\Component\Plugin\Factory {
     interface FactoryInterface {
-        /**
-         * @psalm-taint-sink callable $plugin_id
-         */
         public function createInstance($plugin_id, array $configuration = []): mixed {}
     }
 }
 
 namespace Drupal\Core\Plugin {
     class DefaultPluginManager {
-        /**
-         * @psalm-taint-sink callable $plugin_id
-         */
         public function createInstance($plugin_id, array $configuration = []): mixed {}
     }
 }
@@ -1353,244 +1202,11 @@ namespace Drupal\Core\Extension {
 }
 
 // =============================================================================
-// PHP Built-in Sources (re-taint data from external formats)
+// PHP built-ins are deliberately NOT redeclared here.
 // =============================================================================
-namespace {
-    /**
-     * @psalm-taint-source input
-     */
-    function json_decode(string $json, ?bool $associative = null, int $depth = 512, int $flags = 0): mixed {}
-
-    /**
-     * @psalm-taint-source input
-     */
-    function base64_decode(string $string, bool $strict = false): string {}
-
-    /**
-     * @psalm-taint-source input
-     */
-    function simplexml_load_string(string $data, string $class_name = \SimpleXMLElement::class, int $options = 0, string $ns = "", bool $is_prefix = false): \SimpleXMLElement {}
-
-    /**
-     * Insecure deserialization sink.
-     * 
-     * @psalm-taint-sink unserialize $data
-     * 
-     * Note: When called with ['allowed_classes' => FALSE], this is considered safe
-     * and should not be flagged. Psalm's taint analysis currently doesn't support
-     * conditional sinks based on argument values, so we mark all calls as sinks.
-     * 
-     * TODO: Create a custom Psalm plugin to detect safe usage patterns.
-     */
-    function unserialize(string $data, array $options = []): mixed {}
-
-    // Global superglobals as sources
-    /** @psalm-taint-source input */
-    // $_GET — covered by Request->query
-    /** @psalm-taint-source input */
-    // $_POST — covered by Request->request
-    /** @psalm-taint-source input */
-    // $_COOKIE — not covered by Request in Drupal
-    /** @psalm-taint-source input */
-    // $_SERVER — covered by ServerBag
-    /** @psalm-taint-source input */
-    // $_SESSION — covered by AccountInterface
-    /** @psalm-taint-source input */
-    // $_FILES — covered by FileBag
-}
-
-// =============================================================================
-// PHP Built-in Sources (insecure randomness)
-// =============================================================================
-namespace {
-    /**
-     * Insecure random number generators - predictable output.
-     * @psalm-taint-source insecure_random
-     */
-    function uniqid(string $prefix = "", bool $more_entropy = false): string {}
-
-    /**
-     * @psalm-taint-source insecure_random
-     */
-    function mt_rand(int $min = 0, int $max = null): int {}
-
-    /**
-     * @psalm-taint-source insecure_random
-     */
-    function rand(int $min = 0, int $max = null): int {}
-
-    /**
-     * Secure random functions - cryptographically strong.
-     * @psalm-taint-escape insecure_random
-     */
-    function random_int(int $min, int $max): int {}
-
-    /**
-     * @psalm-taint-escape insecure_random
-     */
-    function random_bytes(int $length): string {}
-}
-
-// =============================================================================
-// DOM API (for XSS via HTML attributes)
-// =============================================================================
-namespace {
-    class DOMElement extends DOMNode {
-        /**
-         * @psalm-taint-sink html $value
-         */
-        public function setAttribute(string $name, string $value): bool {}
-
-        /**
-         * @psalm-taint-sink html $attr
-         */
-        public function setAttributeNode(\DOMAttr $attr): \DOMAttr|false {}
-    }
-
-    class DOMAttr extends DOMNode {
-        public string $name;
-        public string $value;
-    }
-
-    class DOMNode {}
-}
-
-// =============================================================================
-// PHP Built-in Sinks (dangerous operations)
-// =============================================================================
-namespace {
-    // Note: eval/echo/print/include/require are language constructs, not
-    // functions — they cannot be declared as `function ...` (invalid PHP) and
-    // Psalm has built-in taint handling for them, so they are intentionally
-    // omitted here.
-
-    /**
-     * @psalm-taint-sink html
-     */
-    function printf(string $format, mixed ...$values): int {}
-
-    /**
-     * @psalm-taint-sink sql
-     */
-    function mysql_query(string $query, $link_identifier = null): mixed {}
-
-    /**
-     * @psalm-taint-sink shell
-     */
-    function exec(string $command, &$output = null, &$return_var = null): string {}
-
-    /**
-     * @psalm-taint-sink shell
-     */
-    function system(string $command, &$return_var = null): string {}
-
-    /**
-     * @psalm-taint-sink shell
-     */
-    function passthru(string $command, &$return_var = null): void {}
-
-    /**
-     * @psalm-taint-sink shell
-     */
-    function shell_exec(string $command): string {}
-
-    /**
-     * @psalm-taint-sink shell
-     */
-    function proc_open(string $cmd, array $descriptorspec, &$pipes, ?string $cwd = null, ?array $env_vars = null, ?array $other_options = null): mixed {}
-
-    /**
-     * @psalm-taint-sink shell
-     */
-    function popen(string $command, string $mode): mixed {}
-
-    /**
-     * @psalm-taint-sink shell
-     */
-    function pcntl_exec(string $path, array $args = [], array $envs = []): void {}
-
-    /**
-     * @psalm-taint-sink html
-     */
-    function file_get_contents(string $filename, bool $use_include_path = false, $context = null, int $offset = 0, int $length = null): string {}
-
-    /**
-     * @psalm-taint-sink html
-     */
-    function fopen(string $filename, string $mode, bool $use_include_path = false, $context = null): mixed {}
-
-    /**
-     * @psalm-taint-sink html
-     */
-    function copy(string $source, string $destination, $context = null): bool {}
-
-    /**
-     * @psalm-taint-sink html
-     */
-    function rename(string $from, string $to, $context = null): bool {}
-
-    /**
-     * @psalm-taint-sink html
-     */
-    function readfile(string $filename, bool $use_include_path = false, $context = null): int {}
-
-    /**
-     * @psalm-taint-sink ssrf
-     */
-    function curl_exec($handle): mixed {}
-
-    /**
-     * @psalm-taint-source input
-     */
-    function get_headers(string $url, bool $associative = false): array {}
-}
-
-// =============================================================================
-// Legacy Drupal 7 Functions
-// =============================================================================
-namespace {
-    /**
-     * @psalm-taint-source input
-     */
-    function arg($index = null, ?string $path = null): mixed {}
-
-    /**
-     * @psalm-taint-source input
-     */
-    function drupal_get_form($form_id): array {}
-
-    /**
-     * @psalm-taint-sink html
-     */
-    function drupal_set_message($message = null, string $type = 'status', bool $repeat = true): array {}
-
-    /**
-     * @psalm-taint-escape html
-     */
-    function check_plain($text): string {}
-
-    /**
-     * @psalm-taint-escape html
-     */
-    function filter_xss($string, array $allowed_tags = []): string {}
-
-    /**
-     * @psalm-taint-escape html
-     */
-    function filter_xss_admin($string): string {}
-
-    /**
-     * @psalm-taint-escape sql
-     */
-    function db_like($string): string {}
-
-    /**
-     * @psalm-taint-sink sql
-     */
-    function db_query($query, array $args = [], array $options = []): mixed {}
-
-    /**
-     * @psalm-taint-source input
-     */
-    function drupal_get_destination(): string {}
-}
+// Psalm already models the taint behaviour of PHP's own functions (exec,
+// system, proc_open, file_get_contents, readfile, unserialize, printf, …).
+// Redeclaring one in a stub REPLACES Psalm's definition, so a redeclaration
+// with an imperfect annotation silently deletes a sink: 1.0.0 lost every
+// shell-execution sink this way. tests/fixtures/builtins.php pins that each
+// built-in sink plain Psalm reports is still reported with this plugin.

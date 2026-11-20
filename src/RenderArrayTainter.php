@@ -5,62 +5,52 @@ declare(strict_types=1);
 namespace DrupalSecurityPsalm;
 
 use PhpParser\Node\ArrayItem;
-use Psalm\Internal\Analyzer\StatementsAnalyzer;
+use PhpParser\Node\Expr;
+use PhpParser\Node\Scalar\String_;
 use Psalm\Plugin\EventHandler\Event\AddRemoveTaintsEvent;
 use Psalm\Plugin\EventHandler\RemoveTaintsInterface;
 
 /**
- * Strips `html` taint from *safe* render-array keys while preserving it on the
- * keys that are genuinely dangerous.
+ * Clears HTML taint from render-array values that Drupal escapes on output.
  *
- * Drupal render arrays are associative arrays whose `#`-prefixed keys have wildly
- * different security semantics. Values under presentation keys (`#title`,
- * `#description`, `#default_value`, ...) are auto-escaped by Twig at render time,
- * so untrusted data there is NOT an XSS sink. But a handful of keys are raw HTML
- * (`#markup`, `#template`, `#children`) or executable callbacks (`#pre_render`,
- * `#lazy_builder`, `#access_callback`, ...). Without this distinction every
- * tainted render-array value would be reported — the dominant false-positive
- * source in Drupal taint analysis.
+ * A render array reaching the renderer is an HTML sink, but most of its keys
+ * are printed through Twig, which escapes them: a user-supplied `#title` or
+ * `#description` is not XSS. Only those keys are listed here. Every other key —
+ * `#markup`, `#children`, `#prefix`, `#template`, callbacks, and any key a
+ * contributed element invents — keeps its taint, so an unknown key errs on the
+ * side of reporting rather than hiding a flow.
  *
- * Behaviour: for a `#`-prefixed key that is NOT in {@see self::DANGEROUS_KEYS}
- * we return `['html']`, telling Psalm to drop the `html` taint from that value.
- * For the dangerous keys (and any non-`#` key) we remove nothing, so taint flows
- * through to the render sink and is reported.
- *
- * Ported and maintained from mortenson/psalm-plugin-drupal's RenderArrayTainter
- * (LGPL-2.1-only, Sam Mortenson) so this project owns the Drupal taint layer
- * without depending on that unmaintained package. Keep DANGEROUS_KEYS in sync
- * with Drupal core's render-array contract.
+ * Keys are read from the syntax tree, so this uses no Psalm-internal API. Only
+ * the literal form `['#title' => $x]` can be handled: Psalm dispatches no
+ * taint-removal event for `$build['#title'] = $x`, so that form is still
+ * reported (pinned as a known false positive in tests/fixtures/render_array.php).
  */
 final class RenderArrayTainter implements RemoveTaintsInterface
 {
     /**
-     * Render-array keys whose values are raw HTML or executable callbacks.
-     * Taint reaching these is a real XSS / RCE sink and must be preserved.
+     * Render and form API keys whose values Drupal escapes when rendering.
      *
-     * @var list<string>
+     * Each is printed by a core template through Twig autoescaping (or, for
+     * #attributes, the Attribute class). Keep this list conservative: adding a
+     * key that can be output unescaped would hide real XSS.
      */
-    private const DANGEROUS_KEYS = [
-        // Code execution — value is a callable/callback invoked by the renderer.
-        '#access_callback',
-        '#ajax',
-        '#after_build',
-        '#element_validate',
-        '#lazy_builder',
-        '#post_render',
-        '#pre_render',
-        '#process',
-        '#submit',
-        '#validate',
-        '#value_callback',
-        '#file_value_callbacks',
-        '#date_date_callbacks',
-        '#date_time_callbacks',
-        '#captcha_validate',
-        // Cross-site scripting — value is emitted as raw, unescaped HTML.
-        '#markup',
-        '#template',
-        '#children',
+    private const ESCAPED_KEYS = [
+        '#alt',
+        '#attributes',
+        '#caption',
+        '#default_value',
+        '#description',
+        '#empty',
+        '#empty_option',
+        '#field_prefix',
+        '#field_suffix',
+        '#header',
+        '#items',
+        '#options',
+        '#placeholder',
+        '#plain_text',
+        '#rows',
+        '#title',
     ];
 
     /**
@@ -68,29 +58,19 @@ final class RenderArrayTainter implements RemoveTaintsInterface
      */
     public static function removeTaints(AddRemoveTaintsEvent $event): array
     {
-        $item = $event->getExpr();
-        $statements_analyzer = $event->getStatementsSource();
-        if (!($item instanceof ArrayItem) || !($statements_analyzer instanceof StatementsAnalyzer)) {
-            return [];
-        }
+        $key = self::renderKey($event->getExpr());
+        return $key !== null && in_array($key, self::ESCAPED_KEYS, true) ? ['html'] : [];
+    }
 
-        $item_key_value = '';
-        if ($item->key) {
-            $item_key_type = $statements_analyzer->node_data->getType($item->key);
-            if ($item_key_type && $item_key_type->isSingleStringLiteral()) {
-                $item_key_value = $item_key_type->getSingleStringLiteral()->value;
-            }
+    /**
+     * The literal render-array key an expression writes to, if any.
+     */
+    private static function renderKey(Expr|ArrayItem $expr): ?string
+    {
+        if (!$expr instanceof ArrayItem) {
+            return null;
         }
-
-        if (
-            isset($item_key_value[0])
-            && $item_key_value[0] === '#'
-            && !in_array($item_key_value, self::DANGEROUS_KEYS, true)
-        ) {
-            // Safe presentation key — Twig auto-escapes it; drop the html taint.
-            return ['html'];
-        }
-
-        return [];
+        $key = $expr->key;
+        return $key instanceof String_ && str_starts_with($key->value, '#') ? $key->value : null;
     }
 }

@@ -21,11 +21,11 @@ function render_literal(Request $request, RendererInterface $renderer): void
 {
     $evil = $request->query->get('x');
 
-    $dangerous = ['#markup' => $evil]; // expect FLAG (line ~24)
-    $renderer->render($dangerous);
+    $dangerous = ['#markup' => $evil];
+    $renderer->render($dangerous); // expect: TaintedHtml
 
-    $safe = ['#title' => $evil];       // expect NO flag (line ~27)
-    $renderer->render($safe);
+    $safe = ['#title' => $evil];
+    $renderer->render($safe); // expect: none
 }
 
 function render_assignment(Request $request, RendererInterface $renderer): void
@@ -33,10 +33,11 @@ function render_assignment(Request $request, RendererInterface $renderer): void
     $evil = $request->query->get('x');
 
     $dangerous = [];
-    $dangerous['#markup'] = $evil;     // expect FLAG (line ~36)
-    $renderer->render($dangerous);
+    $dangerous['#markup'] = $evil;
+    $renderer->render($dangerous); // expect: TaintedHtml
 
     $safe = [];
-    $safe['#title'] = $evil;           // currently FLAGS = false positive (line ~40)
-    $renderer->render($safe);
+    // RenderArrayTainter handles ['#title' => $x] but not $a['#title'] = $x.
+    $safe['#title'] = $evil;
+    $renderer->render($safe); // known-false-positive: TaintedHtml
 }

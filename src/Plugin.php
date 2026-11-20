@@ -12,16 +12,18 @@ use SimpleXMLElement;
  * Entry point for the Drupal Security Psalm plugin.
  *
  * Teaches Psalm's taint engine about Drupal so it can find real data-flow
- * vulnerabilities (XSS, SQLi, RCE via render arrays, insecure deserialization,
- * SSRF) with a low false-positive rate. A self-registering, maintained
- * replacement for mortenson/psalm-plugin-drupal:
+ * vulnerabilities (XSS, SQL injection, code execution through render arrays,
+ * insecure deserialization, path traversal):
  *
- *   - Ships a comprehensive Drupal taint model (sources / sinks / sanitizers)
- *     via stubs/drupal.stubs.php — a strict superset of mortenson's stubs.
- *   - Registers {@see RenderArrayTainter} to suppress the render-array
- *     false-positive class while preserving the dangerous keys.
- *   - Reserves a seam for service-container type resolution (full-site mode),
- *     implemented in a later phase — see below.
+ *   - A Drupal taint model (sources, sinks and sanitizers) in
+ *     stubs/drupal.stubs.php. PHP's own built-ins are left to Psalm: a stub
+ *     that redeclares one replaces Psalm's definition and can delete a sink.
+ *   - {@see RenderArrayTainter}, which drops taint from render-array keys Twig
+ *     autoescapes while keeping it on the dangerous ones.
+ *   - {@see RenderElementSource} and {@see FieldValueSource}, which mark
+ *     framework-populated element values and field values as input.
+ *
+ * Every behaviour is pinned by tests/fixtures and tests/check.php.
  *
  * Distribution: this class is wired via composer.json `extra.psalm.pluginClass`,
  * so consumers only run `composer require --dev` + `psalm-plugin enable`; they do
@@ -61,9 +63,10 @@ final class Plugin implements PluginEntryPointInterface
         //         $registration->registerHooksFromClass(ContainerHandler::class);
         //     }
         //
-        // The unserialize `allowed_classes => false` false positive is handled at
-        // the report layer by filter_findings.py — Psalm has no hook for
-        // conditional argument-sink suppression (see that file's header).
+        // Psalm cannot make a sink conditional on another argument, so
+        // unserialize($x, ['allowed_classes' => FALSE]) is still reported here.
+        // Consumers should drop that case at the report layer (the Security
+        // Scan Drupal module does).
         unset($config);
     }
 }

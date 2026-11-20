@@ -11,19 +11,19 @@ real data-flow vulnerabilities in modules, themes and custom code:
 - **Command injection / RCE** — shell sinks and callables built from input
 - **Insecure deserialization** — untrusted data reaching `unserialize()`
 
-It ships a Drupal taint model (99 input sources plus sinks and sanitizers) as
-stubs, and a hook that suppresses the render-array false-positive class while
-keeping the dangerous keys. It self-registers, so you don't edit `psalm.xml`
-by hand. It is intended as a maintained replacement for
-`mortenson/psalm-plugin-drupal`.
+It ships a Drupal taint model as stubs (67 input sources, 69 sinks and 12
+sanitizers), plus hooks that clear taint from render-array keys Drupal escapes
+and mark field and form-element values as input. PHP's own functions (`exec`,
+`unserialize`, `file_get_contents`, …) are left to Psalm, which already models
+them. It self-registers, so you don't edit `psalm.xml` by hand.
 
 > This is a community project. It is **not** an official Drupal Security Team
 > tool, and a clean result does not prove code is secure.
 
 ## Requirements
 
-- PHP 8.1+
-- Psalm 6 (`vimeo/psalm` ^6.0 — installed automatically)
+- PHP 8.2+
+- Psalm 6.16 or later 6.x (`vimeo/psalm` ^6.16 — installed automatically)
 
 ## Installation
 
@@ -54,15 +54,31 @@ composer require --dev drupal-security/scanner
 drush security:scan my_module
 ```
 
+## Known limits
+
+- **Hardened `unserialize()` is still reported.** Psalm cannot make a sink
+  depend on another argument, so `unserialize($x, ['allowed_classes' => FALSE])`
+  is flagged; drop it at the report layer (the Security Scan module does).
+- **`$build['#title'] = $x` is reported** even though `#title` is escaped:
+  Psalm only lets a plugin clear taint on array literals (`['#title' => $x]`).
+- **Services fetched with `\Drupal::service('id')`** are untyped, so taint is
+  not followed through them.
+- **Controller arguments filled from the URL** (`/hello/{name}` → `$name`) are
+  not yet treated as input.
+- A clean result does not prove code is secure.
+
 ## Development
 
 ```bash
 composer install
-vendor/bin/psalm --taint-analysis
+composer test
 ```
 
-`psalm.xml` analyses the deliberately vulnerable code in `tests/fixtures`; each
-fixture should produce its expected `Tainted*` findings.
+`composer test` runs `tests/check.php`, which analyses `tests/fixtures` and
+checks every `// expect:` annotation (the issue types a line must report, or
+`none`), fails on any unannotated finding, and checks that every built-in sink
+plain Psalm reports is still reported with the plugin. CI runs it on PHP 8.2,
+8.3 and 8.4 against the lowest and highest supported dependencies.
 
 ## License
 
